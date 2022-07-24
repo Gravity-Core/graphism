@@ -226,6 +226,11 @@ defmodule Graphism do
           Graphism.Api.api_module(e, schema, hooks, repo: repo, caller: __CALLER__)
         end)
 
+      handler_modules =
+        Enum.flat_map(schema, fn e ->
+          Graphism.Rest.handler_modules(e, schema, hooks, repo: repo, caller: __CALLER__)
+        end)
+
       resolver_modules =
         Enum.map(schema, fn e ->
           Graphism.Resolver.resolver_module(e, schema,
@@ -234,6 +239,10 @@ defmodule Graphism do
             caller: __CALLER__
           )
         end)
+
+      rest_openapi_module = Graphism.Rest.openapi_module(schema, caller: __CALLER__)
+      rest_redocui_module = Graphism.Rest.redocui_module(schema, caller: __CALLER__)
+      rest_router_module = Graphism.Rest.router_module(schema, caller: __CALLER__)
 
       graphql_dataloader_queries = Graphism.Graphql.dataloader_queries(schema)
       graphql_fields_auth = Graphism.Graphql.fields_auth_module(schema, default_allow_hook)
@@ -264,7 +273,11 @@ defmodule Graphism do
         graphql_entities_queries,
         graphql_entities_mutations,
         graphql_queries,
-        graphql_mutations
+        graphql_mutations,
+        handler_modules,
+        rest_openapi_module,
+        rest_redocui_module,
+        rest_router_module
       ])
     end
   end
@@ -315,6 +328,7 @@ defmodule Graphism do
       |> Entity.with_schema_module(caller_module)
       |> Entity.with_api_module(caller_module)
       |> Entity.with_resolver_module(caller_module)
+      |> Entity.with_handler_module(caller_module)
       |> Entity.maybe_with_scope()
 
     Module.put_attribute(__CALLER__.module, :schema, entity)

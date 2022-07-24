@@ -50,6 +50,10 @@ defmodule Graphism.Entity do
     end) != nil
   end
 
+  def find_action(e, action) do
+    e[:actions][action] || e[:custom_actions][action]
+  end
+
   def virtual?(e), do: modifier?(e, :virtual)
   def client_ids?(e), do: modifier?(e, :client_ids)
   def refetch?(e), do: modifier?(e, :refetch)
@@ -57,6 +61,7 @@ defmodule Graphism.Entity do
 
   def computed?(attr), do: modifier?(attr, :computed)
   def optional?(attr), do: modifier?(attr, :optional)
+  def required?(attr), do: !optional?(attr) && !computed?(attr)
   def unique?(attr), do: modifier?(attr, :unique)
   def immutable?(attr), do: modifier?(attr, :immutable)
   def non_empty?(attr), do: modifier?(attr, :non_empty)
@@ -191,6 +196,9 @@ defmodule Graphism.Entity do
       name == attr[:name]
     end)
   end
+
+  def all_fields(e), do: e[:attributes] ++ e[:relations]
+  def required_fields(e), do: Enum.filter(e[:attributes] ++ e[:relations], &required?/1)
 
   def unique_keys(e), do: Enum.filter(e[:keys], &unique_key?/1)
   def non_unique_keys(e), do: Enum.reject(e[:keys], &unique_key?/1)
@@ -401,8 +409,15 @@ defmodule Graphism.Entity do
     |> Enum.map(fn e ->
       e
       |> with_display_name()
+      |> with_camel_name()
       |> with_relations!(index, plurals)
     end)
+  end
+
+  def with_camel_name(e) do
+    e
+    |> Keyword.put(:camel_name, Inflex.camelize(e[:name], :lower))
+    |> Keyword.put(:plural_camel_name, Inflex.camelize(e[:plural], :lower))
   end
 
   def with_display_name(e) do
@@ -548,6 +563,10 @@ defmodule Graphism.Entity do
 
   def with_api_module(entity, caller_mod) do
     module_name(caller_mod, entity, :api_module, :api)
+  end
+
+  def with_handler_module(entity, caller_mod) do
+    module_name(caller_mod, entity, :handler_module, :handler)
   end
 
   def module_name(prefix, entity, name, suffix \\ nil) do
